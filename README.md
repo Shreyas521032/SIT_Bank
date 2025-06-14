@@ -49,9 +49,6 @@ shreyas-sitbank/
 
 ## 🚀 Quick Start
 
-### Online Usage
-Simply visit: [https://shreyas-sitbank.streamlit.app/](https://shreyas-sitbank.streamlit.app/)
-
 ### Local Development
 
 1. **Clone the repository**
