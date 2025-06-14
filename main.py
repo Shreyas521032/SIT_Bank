@@ -209,6 +209,7 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown("*Thank you for using SBI Banking System! 🙏*")
+    st.markdown("CRAFTED WITH ❤️BY SHREYAS KASTURE")
 
 if __name__ == "__main__":
     main()
