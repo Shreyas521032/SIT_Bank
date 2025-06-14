@@ -117,14 +117,6 @@ shreyas-sitbank/
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is created for educational purposes and demonstrates modern web application development with Python and Streamlit.
-
-## 📞 Support
-
-For any issues or questions, please create an issue in the repository or contact the development team.
-
 ---
 
 **🏦 Experience modern banking with SBI Digital Banking System!**
