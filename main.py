@@ -1,6 +1,60 @@
 import streamlit as st
-from Banking.account import SavingsAccount, CurrentAccount
-from Banking.transactions import deposit, withdraw
+
+class Account:
+    account_counter = 1000
+    
+    def __init__(self, name, initial_balance=0):
+        Account.account_counter += 1
+        self.account_number = Account.account_counter
+        self.name = name
+        self.balance = initial_balance
+    
+    def get_balance(self):
+        return self.balance
+    
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.balance += amount
+    
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+
+class SavingsAccount(Account):
+    def __init__(self, name, initial_balance=0, interest_rate=0.04):
+        super().__init__(name, initial_balance)
+        self.interest_rate = interest_rate
+    
+    def calculate_interest(self):
+        """Calculate and add interest to the account"""
+        if self.balance <= 0:
+            raise ValueError("No balance available for interest calculation")
+        
+        interest = self.balance * self.interest_rate
+        self.balance += interest
+        return interest
+
+class CurrentAccount(Account):
+    def __init__(self, name, initial_balance=0, overdraft_limit=1000):
+        super().__init__(name, initial_balance)
+        self.overdraft_limit = overdraft_limit
+    
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+        if amount > (self.balance + self.overdraft_limit):
+            raise ValueError(f"Exceeds overdraft limit of ₹{self.overdraft_limit}")
+        self.balance -= amount
+
+def deposit(account, amount):
+    account.deposit(amount)
+
+def withdraw(account, amount):
+    account.withdraw(amount)
 
 if 'accounts' not in st.session_state:
     st.session_state.accounts = {}
@@ -63,6 +117,9 @@ def dashboard():
         st.metric("Account Type", type(user_account).__name__)
     with col3:
         st.metric("Current Balance", f"₹{user_account.get_balance():.2f}")
+    
+    if isinstance(user_account, SavingsAccount):
+        st.info(f"💡 Interest Rate: {user_account.interest_rate * 100:.1f}% per calculation")
     
     st.divider()
     
@@ -140,13 +197,16 @@ def interest_page():
     
     if isinstance(user_account, SavingsAccount):
         st.info(f"Current Balance: ₹{user_account.get_balance():.2f}")
+        st.info(f"Interest Rate: {user_account.interest_rate * 100:.1f}%")
+        
+        potential_interest = user_account.get_balance() * user_account.interest_rate
+        st.warning(f"Interest to be earned: ₹{potential_interest:.2f}")
         
         if st.button("Calculate Interest", type="primary"):
             try:
                 old_balance = user_account.get_balance()
-                user_account.calculate_interest()
+                interest_earned = user_account.calculate_interest()
                 new_balance = user_account.get_balance()
-                interest_earned = new_balance - old_balance
                 
                 st.success(f"✅ Interest calculated successfully!")
                 col1, col2 = st.columns(2)
@@ -154,8 +214,14 @@ def interest_page():
                     st.metric("Interest Earned", f"₹{interest_earned:.2f}")
                 with col2:
                     st.metric("New Balance", f"₹{new_balance:.2f}")
-            except Exception as e:
+                    
+                st.balloons()
+            except ValueError as e:
                 st.error(f"Error: {str(e)}")
+            except Exception as e:
+                st.error(f"Unexpected error: {str(e)}")
+    else:
+        st.error("Interest calculation is only available for Savings Accounts.")
     
     if st.button("← Back to Dashboard"):
         st.session_state.current_page = 'dashboard'
@@ -174,7 +240,6 @@ def main():
     
     if st.session_state.current_page == 'main':
         if st.session_state.logged_in_user is None:
-            # Main menu
             tab1, tab2 = st.tabs(["🔐 Login", "🆕 Create Account"])
             
             with tab1:
@@ -198,7 +263,6 @@ def main():
     elif st.session_state.current_page == 'interest':
         interest_page()
     
-    # Footer
     st.markdown("---")
     st.markdown("*Thank you for using SBI Banking System! 🙏*")
     st.markdown("CRAFTED WITH ❤️BY SHREYAS KASTURE")
