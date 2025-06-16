@@ -1,9 +1,7 @@
-# streamlit_app.py
 import streamlit as st
 from Banking.account import SavingsAccount, CurrentAccount
 from Banking.transactions import deposit, withdraw
 
-# Initialize session state for accounts
 if 'accounts' not in st.session_state:
     st.session_state.accounts = {}
 if 'logged_in_user' not in st.session_state:
@@ -56,10 +54,8 @@ def login_page():
 def dashboard():
     user_account = st.session_state.logged_in_user
     
-    # Header
     st.subheader(f"👋 Welcome, {user_account.name}!")
     
-    # Account info in columns
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Account Number", user_account.account_number)
@@ -70,7 +66,6 @@ def dashboard():
     
     st.divider()
     
-    # Action buttons in columns
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -167,19 +162,16 @@ def interest_page():
         st.rerun()
 
 def main():
-    # Page config
     st.set_page_config(
         page_title="SBI Banking System",
         page_icon="🏦",
         layout="centered"
     )
     
-    # Header
     st.title("🏦 SBI Banking System")
     st.markdown("**Nagpur SIT Branch**")
     st.markdown("---")
     
-    # Navigation based on current page
     if st.session_state.current_page == 'main':
         if st.session_state.logged_in_user is None:
             # Main menu
