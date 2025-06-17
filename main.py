@@ -31,8 +31,9 @@ class SavingsAccount(Account):
     
     def calculate_interest(self):
         """Calculate and add interest to the account"""
+        # Fixed: Allow interest calculation on any positive balance
         if self.balance <= 0:
-            raise ValueError("No balance available for interest calculation")
+            raise ValueError("Balance must be positive for interest calculation")
         
         interest = self.balance * self.interest_rate
         self.balance += interest
@@ -56,6 +57,7 @@ def deposit(account, amount):
 def withdraw(account, amount):
     account.withdraw(amount)
 
+# Initialize session state
 if 'accounts' not in st.session_state:
     st.session_state.accounts = {}
 if 'logged_in_user' not in st.session_state:
@@ -120,6 +122,8 @@ def dashboard():
     
     if isinstance(user_account, SavingsAccount):
         st.info(f"💡 Interest Rate: {user_account.interest_rate * 100:.1f}% per calculation")
+    elif isinstance(user_account, CurrentAccount):
+        st.info(f"💼 Overdraft Limit: ₹{user_account.overdraft_limit:.2f}")
     
     st.divider()
     
@@ -140,6 +144,8 @@ def dashboard():
             if st.button("📈 Calculate Interest", use_container_width=True):
                 st.session_state.current_page = 'interest'
                 st.rerun()
+        else:
+            st.empty()  # Maintain column structure
     
     with col4:
         if st.button("🚪 Logout", use_container_width=True):
@@ -154,7 +160,7 @@ def deposit_page():
     st.info(f"Current Balance: ₹{user_account.get_balance():.2f}")
     
     with st.form("deposit_form"):
-        amount = st.number_input("Enter amount to deposit:", min_value=0.01, step=0.01)
+        amount = st.number_input("Enter amount to deposit:", min_value=0.01, step=0.01, value=100.0)
         submitted = st.form_submit_button("Deposit")
         
         if submitted:
@@ -173,10 +179,20 @@ def withdraw_page():
     st.subheader("💸 Withdraw Money")
     user_account = st.session_state.logged_in_user
     
-    st.info(f"Current Balance: ₹{user_account.get_balance():.2f}")
+    current_balance = user_account.get_balance()
+    st.info(f"Current Balance: ₹{current_balance:.2f}")
+    
+    if isinstance(user_account, CurrentAccount):
+        available_amount = current_balance + user_account.overdraft_limit
+        st.info(f"Available Amount (with overdraft): ₹{available_amount:.2f}")
     
     with st.form("withdraw_form"):
-        amount = st.number_input("Enter amount to withdraw:", min_value=0.01, step=0.01)
+        max_amount = current_balance if isinstance(user_account, SavingsAccount) else current_balance + user_account.overdraft_limit
+        amount = st.number_input("Enter amount to withdraw:", min_value=0.01, step=0.01, value=50.0)
+        
+        if amount > max_amount:
+            st.warning(f"⚠️ Amount exceeds available funds (₹{max_amount:.2f})")
+        
         submitted = st.form_submit_button("Withdraw")
         
         if submitted:
@@ -196,34 +212,70 @@ def interest_page():
     user_account = st.session_state.logged_in_user
     
     if isinstance(user_account, SavingsAccount):
-        st.info(f"Current Balance: ₹{user_account.get_balance():.2f}")
-        st.info(f"Interest Rate: {user_account.interest_rate * 100:.1f}%")
+        current_balance = user_account.get_balance()
         
-        potential_interest = user_account.get_balance() * user_account.interest_rate
-        st.warning(f"Interest to be earned: ₹{potential_interest:.2f}")
+        # Display current account info
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Current Balance", f"₹{current_balance:.2f}")
+        with col2:
+            st.metric("Interest Rate", f"{user_account.interest_rate * 100:.1f}%")
         
-        if st.button("Calculate Interest", type="primary"):
-            try:
-                old_balance = user_account.get_balance()
-                interest_earned = user_account.calculate_interest()
-                new_balance = user_account.get_balance()
-                
-                st.success(f"✅ Interest calculated successfully!")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Interest Earned", f"₹{interest_earned:.2f}")
-                with col2:
-                    st.metric("New Balance", f"₹{new_balance:.2f}")
+        st.divider()
+        
+        # Check if interest can be calculated
+        if current_balance > 0:
+            potential_interest = current_balance * user_account.interest_rate
+            potential_new_balance = current_balance + potential_interest
+            
+            st.success("✅ Ready to calculate interest!")
+            
+            # Show potential earnings
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info(f"💰 Interest to be earned: **₹{potential_interest:.2f}**")
+            with col2:
+                st.info(f"🏦 New balance will be: **₹{potential_new_balance:.2f}**")
+            
+            st.divider()
+            
+            # Calculate interest button
+            if st.button("🎯 Calculate & Add Interest", type="primary", use_container_width=True):
+                try:
+                    old_balance = user_account.get_balance()
+                    interest_earned = user_account.calculate_interest()
+                    new_balance = user_account.get_balance()
                     
-                st.balloons()
-            except ValueError as e:
-                st.error(f"Error: {str(e)}")
-            except Exception as e:
-                st.error(f"Unexpected error: {str(e)}")
+                    st.success(f"🎉 Interest calculated and added successfully!")
+                    
+                    # Show results in a nice format
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Previous Balance", f"₹{old_balance:.2f}")
+                    with col2:
+                        st.metric("Interest Earned", f"₹{interest_earned:.2f}", delta=f"+{interest_earned:.2f}")
+                    with col3:
+                        st.metric("New Balance", f"₹{new_balance:.2f}", delta=f"+{interest_earned:.2f}")
+                        
+                    st.balloons()
+                    
+                except ValueError as e:
+                    st.error(f"❌ Error: {str(e)}")
+                except Exception as e:
+                    st.error(f"❌ Unexpected error: {str(e)}")
+        else:
+            st.warning("⚠️ Cannot calculate interest on zero or negative balance.")
+            st.info("💡 Please deposit some money first to earn interest!")
+            
+            if st.button("💰 Go to Deposit", type="secondary"):
+                st.session_state.current_page = 'deposit'
+                st.rerun()
     else:
-        st.error("Interest calculation is only available for Savings Accounts.")
+        st.error("❌ Interest calculation is only available for Savings Accounts.")
+        st.info("💡 Current accounts do not earn interest but have overdraft facilities.")
     
-    if st.button("← Back to Dashboard"):
+    st.divider()
+    if st.button("← Back to Dashboard", use_container_width=True):
         st.session_state.current_page = 'dashboard'
         st.rerun()
 
@@ -265,7 +317,7 @@ def main():
     
     st.markdown("---")
     st.markdown("*Thank you for using SBI Banking System! 🙏*")
-    st.markdown("CRAFTED WITH ❤️BY SHREYAS KASTURE")
+    st.markdown("**CRAFTED WITH ❤️ BY SHREYAS KASTURE**")
 
 if __name__ == "__main__":
     main()
