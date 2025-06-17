@@ -1,4 +1,4 @@
-# 🏦 SBI Banking System
+# 🏦 SIT Banking System
 
 A modern web-based banking application built with Python and Streamlit, featuring account management, transactions, and interest calculations.
 
