@@ -1,11 +1,13 @@
 import streamlit as st
 
 class Account:
-    account_counter = 1000
-    
     def __init__(self, name, initial_balance=0):
-        Account.account_counter += 1
-        self.account_number = Account.account_counter
+        # Use session state to maintain account counter
+        if 'account_counter' not in st.session_state:
+            st.session_state.account_counter = 1000
+        
+        st.session_state.account_counter += 1
+        self.account_number = st.session_state.account_counter
         self.name = name
         self.balance = initial_balance
     
@@ -127,31 +129,49 @@ def dashboard():
     
     st.divider()
     
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        if st.button("💰 Deposit", use_container_width=True):
-            st.session_state.current_page = 'deposit'
-            st.rerun()
-    
-    with col2:
-        if st.button("💸 Withdraw", use_container_width=True):
-            st.session_state.current_page = 'withdraw'
-            st.rerun()
-    
-    with col3:
-        if isinstance(user_account, SavingsAccount):
+    # Different layout for Savings vs Current accounts
+    if isinstance(user_account, SavingsAccount):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            if st.button("💰 Deposit", use_container_width=True):
+                st.session_state.current_page = 'deposit'
+                st.rerun()
+        
+        with col2:
+            if st.button("💸 Withdraw", use_container_width=True):
+                st.session_state.current_page = 'withdraw'
+                st.rerun()
+        
+        with col3:
             if st.button("📈 Calculate Interest", use_container_width=True):
                 st.session_state.current_page = 'interest'
                 st.rerun()
-        else:
-            st.empty()  # Maintain column structure
-    
-    with col4:
-        if st.button("🚪 Logout", use_container_width=True):
-            st.session_state.logged_in_user = None
-            st.session_state.current_page = 'main'
-            st.rerun()
+        
+        with col4:
+            if st.button("🚪 Logout", use_container_width=True):
+                st.session_state.logged_in_user = None
+                st.session_state.current_page = 'main'
+                st.rerun()
+    else:
+        # Current account - only 3 buttons
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("💰 Deposit", use_container_width=True):
+                st.session_state.current_page = 'deposit'
+                st.rerun()
+        
+        with col2:
+            if st.button("💸 Withdraw", use_container_width=True):
+                st.session_state.current_page = 'withdraw'
+                st.rerun()
+        
+        with col3:
+            if st.button("🚪 Logout", use_container_width=True):
+                st.session_state.logged_in_user = None
+                st.session_state.current_page = 'main'
+                st.rerun()
 
 def deposit_page():
     st.subheader("💰 Deposit Money")
